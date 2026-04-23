@@ -37,7 +37,7 @@ def run_query(question: str, repo_id: str) -> dict:
 
     # 3. Initialize ChatGroq
     llm = ChatGroq(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         temperature=0.1,
         groq_api_key=os.environ.get("GROQ_API_KEY")
     )
