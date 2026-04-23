@@ -1,13 +1,20 @@
 fastapi
 uvicorn[standard]
 python-multipart
-langchain
-langchain-groq
-langchain-community
-langchain-qdrant
-langchain-cohere
+ 
+# LangChain — pinned to 0.3.x series (1.x removed langchain.chains)
+langchain==0.3.25
+langchain-core==0.3.84
+langchain-community==0.3.24
+langchain-groq==0.2.4
+langchain-qdrant==0.2.0
+langchain-cohere==0.3.4
+ 
+# Vector DB + Embeddings
 qdrant-client
 cohere
+ 
+# Monitoring + Utilities
 langsmith
 gitpython
-python-dotenv
+python-dot

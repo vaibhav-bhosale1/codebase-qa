@@ -1,14 +1,16 @@
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.retrieval import create_retrieval_chain
+
 from vector_store import get_retriever, collection_exists
 
-# Load environment variables for Groq and LangSmith
+# Load environment variables
 load_dotenv()
 
-# Strict system prompt to enforce accuracy and prevent hallucinations
+# Strict system prompt for the new LCEL setup
 SYSTEM_PROMPT = """You are an expert code assistant helping developers understand
 a codebase. You will be given relevant code snippets from the
 codebase as context. Answer the user's question based ONLY on
@@ -18,16 +20,11 @@ information to answer the question, clearly say so — never
 make up code or file names. Be concise and technical.
 
 Context:
-{context}
-
-Question:
-{question}
-
-Answer:"""
+{context}"""
 
 def run_query(question: str, repo_id: str) -> dict:
     """
-    Retrieves context from Qdrant, builds a prompt, and queries Groq LLaMA 3.
+    Retrieves context from Qdrant, builds a modern LCEL prompt, and queries Groq LLaMA 3.
     """
     # 1. Check if collection exists
     if not collection_exists(repo_id):
@@ -45,27 +42,21 @@ def run_query(question: str, repo_id: str) -> dict:
         groq_api_key=os.environ.get("GROQ_API_KEY")
     )
 
-    # 4. Create PromptTemplate
-    prompt = PromptTemplate(
-        template=SYSTEM_PROMPT,
-        input_variables=["context", "question"]
-    )
+    # 4. Create Modern Chat Prompt Template
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_PROMPT),
+        ("human", "{input}"),
+    ])
 
-    # 5. Build RetrievalQA chain
-    # Note: When using from_chain_type, the combine_docs_chain_kwargs is passed via chain_type_kwargs
-    chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        return_source_documents=True,
-        chain_type_kwargs={"prompt": prompt}
-    )
+    # 5. Build Modern LCEL Retrieval Chain
+    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
     # 6. Run chain
-    result = chain.invoke({"query": question})
+    result = rag_chain.invoke({"input": question})
 
-    # 7. Extract and deduplicate source documents
-    source_docs = result.get("source_documents", [])
+    # 7. Extract and deduplicate source documents (now stored in 'context' instead of 'source_documents')
+    source_docs = result.get("context", [])
     deduplicated_sources = []
     seen_files = set()
 
@@ -81,6 +72,6 @@ def run_query(question: str, repo_id: str) -> dict:
 
     # 8. Return structured response
     return {
-        "answer": result.get("result", ""),
+        "answer": result.get("answer", ""),
         "sources": deduplicated_sources
     }
