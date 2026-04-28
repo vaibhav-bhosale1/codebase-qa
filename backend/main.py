@@ -10,6 +10,8 @@ from ingest import ingest_zip, ingest_github_url
 from query import run_query
 from vector_store import list_collections, delete_collection
 from utils import sanitize_repo_id
+from pr_service import generate_pr_review
+from pr_service import chat_about_pr
 
 load_dotenv()
 
@@ -39,6 +41,24 @@ class IngestResponse(BaseModel):
     chunks_created: int
     files_indexed: int
     repo_id: str
+
+class PRReviewRequest(BaseModel):
+    pr_url: str
+
+class PRReviewResponse(BaseModel):
+    review_comments: list[dict]
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+class PRChatRequest(BaseModel):
+    pr_url: str
+    question: str
+    history: list[Message] = []
+
+class PRChatResponse(BaseModel):
+    answer: str
 
 
 # Routes
@@ -77,7 +97,6 @@ def ingest_github_route(request: GithubIngestRequest):
     if not request.url.startswith("https://github.com/"):
         raise HTTPException(status_code=400, detail="Must be a valid GitHub URL.")
     
-    # Extract repo name from URL (e.g., https://github.com/user/repo -> repo)
     repo_name = request.url.rstrip("/").split("/")[-1]
     if repo_name.endswith(".git"):
         repo_name = repo_name[:-4]
@@ -107,5 +126,27 @@ def delete_repo(repo_id: str):
         return {"status": "deleted", "repo_id": repo_id}
     raise HTTPException(status_code=500, detail=f"Failed to delete {repo_id}")
 
+@app.post("/review/pr", response_model=PRReviewResponse)
+async def review_pr_route(request: PRReviewRequest):
+    if not request.pr_url.startswith("https://github.com/"):
+        raise HTTPException(status_code=400, detail="Must be a valid GitHub PR URL.")
+    
+    try:
+        reviews = await generate_pr_review(request.pr_url)
+        return PRReviewResponse(review_comments=reviews)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reviewing PR: {str(e)}")
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    
+
+@app.post("/review/pr/chat", response_model=PRChatResponse)
+async def pr_chat_route(request: PRChatRequest):
+    try:
+        # Convert Pydantic Message models to dicts for the service
+        history_dicts = [{"role": m.role, "content": m.content} for m in request.history]
+        answer = await chat_about_pr(request.pr_url, request.question, history_dicts)
+        return PRChatResponse(answer=answer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error chatting about PR: {str(e)}")

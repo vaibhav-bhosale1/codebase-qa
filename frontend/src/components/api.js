@@ -18,10 +18,29 @@ export const uploadZipRepo = async (file) => {
   return response.data;
 };
 
+export const uploadGithubRepo = async (url) => {
+  const response = await api.post('/ingest/github', { url });
+  return response.data;
+};
+
 export const queryRepo = async (question, repoId) => {
   const response = await api.post('/query', {
     question: question,
     repo_id: repoId
   });
   return response.data;
+};
+
+export const reviewPR = async (prUrl) => {
+  const response = await api.post('/review/pr', { pr_url: prUrl });
+  return response.data.review_comments;
+};
+
+export const chatPR = async (prUrl, question, history = []) => {
+  const response = await api.post('/review/pr/chat', {
+    pr_url: prUrl,
+    question: question,
+    history: history
+  });
+  return response.data.answer;
 };

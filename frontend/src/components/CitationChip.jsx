@@ -1,27 +1,22 @@
 import React from 'react';
 
-const LANGUAGE_COLORS = {
-  python: 'bg-blue-500',
-  javascript: 'bg-yellow-400',
-  typescript: 'bg-blue-400',
-  java: 'bg-orange-500',
-  default: 'bg-gray-400'
-};
-
-export default function CitationChip({ source, onClick }) {
-  const colorClass = LANGUAGE_COLORS[source.language?.toLowerCase()] || LANGUAGE_COLORS.default;
-  
-  // Truncate filename to last two segments for cleaner UI
+export default function CitationChip({ source, onClick, isUser }) {
   const pathSegments = source.file.split('/');
   const shortName = pathSegments.slice(-2).join('/');
+
+  // If inside a user bubble (white background), make chip dark.
+  // If inside an assistant bubble (dark background), make chip translucent light.
+  const chipStyle = isUser 
+    ? 'bg-black/10 hover:bg-black/20 text-black border-black/20' 
+    : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10';
 
   return (
     <button 
       onClick={() => onClick(source)}
-      className="flex items-center gap-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-full text-xs text-gray-300 border border-gray-700 transition-colors cursor-pointer"
+      className={`flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer ${chipStyle}`}
     >
-      <span className={`w-2 h-2 rounded-full ${colorClass}`}></span>
-      <span className="truncate max-w-[150px]" title={source.file}>{shortName}</span>
+      <span className={`w-1.5 h-1.5 rounded-full ${isUser ? 'bg-black' : 'bg-white/80'}`}></span>
+      <span className="truncate max-w-37.5" title={source.file}>{shortName}</span>
     </button>
   );
 }
