@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 python-multipart
  
-# LangChain — pinned to 0.3.x series (1.x removed langchain.chains)
+# LangChain — pinned to 0.3.x series
 langchain==0.3.25
 langchain-core==0.3.84
 langchain-community==0.3.24
@@ -17,8 +17,9 @@ cohere
 # Monitoring + Utilities
 langsmith
 gitpython
-python-dot
+python-dotenv
 
+# Auth and Requests
 PyJWT>=2.8.0
 cryptography>=41.0.0
 httpx>=0.25.0
